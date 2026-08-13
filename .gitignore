@@ -1,0 +1,10 @@
+.env
+.env.*
+*.pyc
+__pycache__/
+server_err.txt
+server_out.txt
+*.log
+.venv/
+venv/
+.DS_Store

@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星图·择途 — 高考志愿与职业导航系统</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cosmos: #040b18;
+  --deep:   #07111f;
+  --panel:  #0d1b2e;
+  --glass:  rgba(13,27,46,0.72);
+  --rim:    rgba(99,172,255,0.18);
+  --rim2:   rgba(99,172,255,0.08);
+  --star-blue: #4facfe;
+  --star-cyan: #00f2fe;
+  --nebula:    #a78bfa;
+  --gold:      #fbbf24;
+  --green:     #34d399;
+  --text:      #e8edf5;
+  --muted:     #7a93b4;
+  --faint:     #3a5070;
+  --r: 10px;
+  --tr: 0.28s cubic-bezier(.4,0,.2,1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  background: var(--cosmos);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Star canvas ── */
+#star-canvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+
+/* ── Page sections ── */
+.page { display: none; position: relative; z-index: 1; min-height: 100vh; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ════════════════════════════════
+   PAGE 1 — HERO
+════════════════════════════════ */
+#page-hero {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.hero-tagline {
+  font-size: clamp(10px, 1.4vw, 14px);
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: var(--star-blue);
+  margin-bottom: 2rem;
+  opacity: .8;
+}
+
+.hero-title {
+  font-size: clamp(52px, 9vw, 108px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, #ffffff 0%, var(--star-cyan) 45%, var(--nebula) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.25rem;
+}
+
+.hero-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  margin: 0 6px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.hero-subtitle {
+  font-size: clamp(14px, 2vw, 18px);
+  color: var(--muted);
+  max-width: 540px;
+  margin: 0 auto 3rem;
+  line-height: 1.7;
+}
+
+.hero-badges {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 3.5rem;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px;
+  font-size: 12px; letter-spacing: .04em;
+  border: 1px solid var(--rim);
+  background: var(--rim2);
+  color: var(--star-blue);
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 44px;
+  background: linear-gradient(135deg, #1a5fa8, #0f3d73);
+  border: 1px solid var(--star-blue);
+  border-radius: 100px;
+  color: #fff;
+  font-size: 16px; font-weight: 600;
+  cursor: pointer;
+  transition: var(--tr);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 32px rgba(79,172,254,.25), 0 2px 8px rgba(0,0,0,.4);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(79,172,254,.2), transparent);
+  opacity: 0;
+  transition: var(--tr);
+}
+
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 48px rgba(79,172,254,.4), 0 8px 24px rgba(0,0,0,.4); }
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-arrow {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(79,172,254,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+
+.hero-scroll {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: var(--faint); font-size: 11px; letter-spacing: .1em;
+  animation: float 3s ease-in-out infinite;
+}
+
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, var(--faint), transparent);
+}
+
+/* ════════════════════════════════
+   PAGE 2 — PROFILE FORM
+════════════════════════════════ */
+#page-profile {
+  padding: 0;
+  min-height: 100vh;
+}
+
+.profile-header {
+  padding: 2.5rem 2rem 2rem;
+  border-bottom: 1px solid var(--rim2);
+  background: linear-gradient(to bottom, rgba(79,172,254,.04), transparent);
+}
+
+.page-step {
+  font-size: 12px; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--star-blue); margin-bottom: .75rem;
+}
+
+.profile-header h2 {
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, var(--star-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: .5rem;
+}
+
+.profile-header p { color: var(--muted); font-size: 14px; }
+
+.profile-body {
+  flex: 1;
+  padding: 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.form-section {
+  margin-bottom: 2.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px; font-weight: 600;
+  color: var(--star-cyan);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.form-desc {
+  font-size: 13px; color: var(--muted); margin-top: -0.75rem; margin-bottom: 1rem;
+}
+
+/* Subject checkboxes */
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.subject-chip {
+  position: relative;
+}
+
+.subject-chip input { position: absolute; opacity: 0; }
+
+.subject-chip label {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--faint);
+  border-radius: var(--r);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--tr);
+  text-align: center;
+  user-select: none;
+}
+
+.subject-chip input:checked + label {
+  border-color: var(--star-blue);
+  background: rgba(79,172,254,.12);
+  color: var(--star-cyan);
+  box-shadow: 0 0 12px rgba(79,172,254,.15);
+}
+
+.subject-chip label:hover { border-color: var(--star-blue); color: var(--text); }
+
+.subject-icon { font-size: 16px; }
+
+/* Textarea */
+.form-textarea {
+  width: 100%; min-height: 100px;
+  background: var(--panel);
+  border: 1px solid var(--faint);
+  border-radius: var(--r);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 12px 16px;
+  resize: vertical;
+  transition: var(--tr);
+  line-height: 1.6;
+}
+
+.form-textarea::placeholder { color: var(--faint); }
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--star-blue);
+  box-shadow: 0 0 0 3px rgba(79,172,254,.1);
+}
+
+.profile-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--rim2);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 100px;
+  border: 1px solid var(--faint);
+  background: transparent;
+  color: var(--muted); font-size: 14px;
+  cursor: pointer; transition: var(--tr);
+}
+
+.btn-back:hover { border-color: var(--text); color: var(--text); }
+
+.btn-analyze {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 36px; border-radius: 100px;
+  background: linear-gradient(135deg, #1a5fa8, #0f3d73);
+  border: 1px solid var(--star-blue);
+  color: #fff; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: var(--tr);
+  box-shadow: 0 0 24px rgba(79,172,254,.2);
+}
+
+.btn-analyze:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(79,172,254,.35); }
+
+/* ════════════════════════════════
+   PAGE 3 — RESULTS
+════════════════════════════════ */
+#page-results { padding: 0; }
+
+.results-header {
+  padding: 2rem 2rem 0;
+  background: linear-gradient(to bottom, rgba(79,172,254,.04), transparent);
+  border-bottom: 1px solid var(--rim2);
+}
+
+.results-title-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.results-header h2 {
+  font-size: clamp(20px, 3.5vw, 32px); font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, var(--nebula) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.results-user-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px;
+  background: rgba(167,139,250,.12);
+  border: 1px solid rgba(167,139,250,.3);
+  color: var(--nebula); font-size: 12px;
+}
+
+/* Tabs */
+.tab-nav {
+  display: flex; gap: 0;
+  border-bottom: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 14px 22px;
+  background: transparent;
+  border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: var(--tr);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.tab-btn:hover { color: var(--text); }
+
+.tab-btn.active {
+  color: var(--star-cyan);
+  border-bottom-color: var(--star-cyan);
+}
+
+.tab-icon { font-size: 16px; opacity: .7; }
+
+.tab-content-wrap { flex: 1; overflow: hidden; }
+
+.tab-panel { display: none; padding: 2rem; }
+.tab-panel.active { display: block; }
+
+/* ── TAB 1: Holland Radar ── */
+.radar-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 680px) {
+  .radar-layout { grid-template-columns: 1fr; }
+}
+
+.radar-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.radar-wrap h3 { font-size: 14px; color: var(--muted); margin-bottom: 1rem; }
+
+.radar-labels {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem;
+}
+
+.radar-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--muted);
+}
+
+.radar-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+
+.personality-card {
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.personality-type-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 100px; margin-bottom: 1rem;
+  font-size: 13px; font-weight: 600;
+}
+
+.personality-name {
+  font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: .5rem;
+}
+
+.personality-desc {
+  font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 1.25rem;
+}
+
+.trait-list { display: flex; flex-direction: column; gap: 8px; }
+
+.trait-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text);
+}
+
+.trait-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--star-cyan); flex-shrink: 0;
+}
+
+/* ── TAB 2: Strategy cards ── */
+.strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.strategy-card {
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: var(--tr);
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.strategy-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-accent, var(--star-blue));
+  opacity: .7;
+}
+
+.strategy-card:hover {
+  border-color: rgba(79,172,254,.35);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(0,0,0,.4);
+}
+
+.strategy-icon {
+  font-size: 28px; margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(79,172,254,.1);
+}
+
+.strategy-name { font-size: 17px; font-weight: 700; margin-bottom: .5rem; }
+.strategy-desc { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 1rem; }
+
+.strategy-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.strategy-tag {
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 11px; border: 1px solid;
+}
+
+/* industry badge row */
+.industry-row {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rim2);
+}
+
+.industry-row h3 {
+  font-size: 13px; color: var(--muted); letter-spacing: .1em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+
+.industry-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.industry-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px;
+  font-size: 12px;
+  background: rgba(79,172,254,.06);
+  border: 1px solid var(--rim);
+  color: var(--text);
+  transition: var(--tr);
+}
+
+.industry-chip:hover {
+  background: rgba(79,172,254,.14);
+  border-color: rgba(79,172,254,.4);
+  color: var(--star-cyan);
+}
+
+/* ── TAB 3: Career Paths ── */
+.career-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 680px) {
+  .career-layout { grid-template-columns: 1fr; }
+}
+
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.chart-card h3 { font-size: 14px; color: var(--muted); margin-bottom: 1rem; }
+
+.career-cards { display: flex; flex-direction: column; gap: 1rem; }
+
+.career-card {
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 14px;
+  padding: 1.25rem;
+  transition: var(--tr);
+}
+
+.career-card:hover {
+  border-color: rgba(79,172,254,.4);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+
+.career-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .75rem;
+}
+
+.career-card-name { font-size: 16px; font-weight: 700; }
+
+.match-badge {
+  padding: 4px 12px; border-radius: 100px;
+  font-size: 12px; font-weight: 700;
+  background: rgba(52,211,153,.12);
+  border: 1px solid rgba(52,211,153,.35);
+  color: var(--green);
+}
+
+.career-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: .75rem; }
+
+.career-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.career-meta-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--muted);
+  background: var(--deep);
+  padding: 3px 10px; border-radius: 100px;
+}
+
+/* ── TAB 4: Timeline ── */
+.timeline-wrap { position: relative; max-width: 700px; margin: 0 auto; }
+
+.timeline-line {
+  position: absolute; left: 28px; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--star-blue), var(--nebula), transparent);
+}
+
+.timeline-item {
+  display: flex; gap: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.timeline-node {
+  flex-shrink: 0;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 2px solid var(--star-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  position: relative; z-index: 1;
+  box-shadow: 0 0 16px rgba(79,172,254,.25);
+}
+
+.timeline-node.nebula { border-color: var(--nebula); box-shadow: 0 0 16px rgba(167,139,250,.25); }
+.timeline-node.gold { border-color: var(--gold); box-shadow: 0 0 16px rgba(251,191,36,.25); }
+.timeline-node.green { border-color: var(--green); box-shadow: 0 0 16px rgba(52,211,153,.25); }
+
+.timeline-body { flex: 1; padding-bottom: .5rem; }
+
+.timeline-period {
+  font-size: 11px; color: var(--star-blue);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: .25rem;
+}
+
+.timeline-title { font-size: 17px; font-weight: 700; margin-bottom: .4rem; }
+.timeline-desc { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: .75rem; }
+
+.timeline-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.timeline-tag {
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 11px; color: var(--muted);
+  background: var(--deep);
+  border: 1px solid var(--faint);
+}
+
+.download-section {
+  margin-top: 3rem; text-align: center;
+  padding: 2rem;
+  background: var(--panel);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+}
+
+.download-section p { color: var(--muted); font-size: 14px; margin-bottom: 1.25rem; }
+
+.btn-download {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 32px; border-radius: 100px;
+  background: linear-gradient(135deg, rgba(167,139,250,.2), rgba(79,172,254,.2));
+  border: 1px solid var(--nebula);
+  color: #fff; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: var(--tr);
+  font-family: inherit;
+}
+
+.btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(167,139,250,.25); }
+
+/* ── Loading overlay ── */
+#loading-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(4,11,24,.88);
+  backdrop-filter: blur(8px);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 1.5rem;
+}
+
+#loading-overlay.visible { display: flex; }
+
+.loading-orb {
+  width: 72px; height: 72px; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--star-blue);
+  border-right-color: var(--nebula);
+  animation: spin 1.2s linear infinite;
+  position: relative;
+}
+
+.loading-orb::after {
+  content: '';
+  position: absolute; inset: 8px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: var(--star-cyan);
+  animation: spin-rev .8s linear infinite;
+}
+
+.loading-text {
+  font-size: 16px; color: var(--muted);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Animations ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin-rev { to { transform: rotate(-360deg); } }
+@keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+@keyframes float { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-8px)} }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
+@keyframes fade-in { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes twinkle { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.fade-in { animation: fade-in .5s ease both; }
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+  .tab-btn { padding: 12px 14px; font-size: 12px; }
+  .profile-body { padding: 1.25rem; }
+  .tab-panel { padding: 1.25rem; }
+  .profile-footer { padding: 1rem 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="star-canvas"></canvas>
+
+<!-- ════ PAGE 1: HERO ════ -->
+<div id="page-hero" class="page active">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem 8rem;">
+    <p class="hero-tagline">多智能体导航系统 · GoAI Star Map</p>
+
+    <h1 class="hero-title">星图<span class="hero-dot"></span>择途</h1>
+
+    <p class="hero-subtitle">
+      基于多智能体的高考志愿与未来职业导航系统<br>
+      以星图为引，在时代浪潮中找寻属于你的轨道
+    </p>
+
+    <div class="hero-badges">
+      <span class="badge">🧠 Holland 人格分析</span>
+      <span class="badge">🚀 国家战略匹配</span>
+      <span class="badge">🗺️ 职业路径规划</span>
+      <span class="badge">⏱️ 人生时间轴</span>
+    </div>
+
+    <button class="btn-primary" onclick="goToProfile()">
+      开始探索
+      <span class="btn-arrow">→</span>
+    </button>
+  </div>
+
+  <div class="hero-scroll">
+    <span>向下滚动</span>
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE 2: PROFILE FORM ════ -->
+<div id="page-profile" class="page">
+  <div class="profile-header">
+    <p class="page-step">STEP 01 / 02 — 建立画像</p>
+    <h2>告诉我们关于你的一切</h2>
+    <p>我们会根据你的回答，用多智能体系统为你绘制专属星图</p>
+  </div>
+
+  <div class="profile-body" style="flex:1;">
+    <!-- Subjects -->
+    <div class="form-section">
+      <label class="form-label">你擅长的科目</label>
+      <p class="form-desc">选择你感兴趣或成绩较好的科目（可多选）</p>
+      <div class="subject-grid">
+        <div class="subject-chip">
+          <input type="checkbox" id="s-math" name="subject" value="数学">
+          <label for="s-math"><span class="subject-icon">📐</span> 数学</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-physics" name="subject" value="物理">
+          <label for="s-physics"><span class="subject-icon">⚡</span> 物理</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-chem" name="subject" value="化学">
+          <label for="s-chem"><span class="subject-icon">🧪</span> 化学</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-bio" name="subject" value="生物">
+          <label for="s-bio"><span class="subject-icon">🧬</span> 生物</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-cs" name="subject" value="信息技术">
+          <label for="s-cs"><span class="subject-icon">💻</span> 信息技术</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-chinese" name="subject" value="语文">
+          <label for="s-chinese"><span class="subject-icon">📝</span> 语文</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-english" name="subject" value="英语">
+          <label for="s-english"><span class="subject-icon">🌐</span> 英语</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-history" name="subject" value="历史">
+          <label for="s-history"><span class="subject-icon">📜</span> 历史</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-geo" name="subject" value="地理">
+          <label for="s-geo"><span class="subject-icon">🗾</span> 地理</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-politics" name="subject" value="政治">
+          <label for="s-politics"><span class="subject-icon">⚖️</span> 政治</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-art" name="subject" value="艺术">
+          <label for="s-art"><span class="subject-icon">🎨</span> 艺术</label>
+        </div>
+        <div class="subject-chip">
+          <input type="checkbox" id="s-sport" name="subject" value="体育">
+          <label for="s-sport"><span class="subject-icon">🏃</span> 体育</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interests -->
+    <div class="form-section">
+      <label class="form-label" for="interests">兴趣爱好</label>
+      <p class="form-desc">你平时喜欢做什么？有哪些让你专注忘时的事情？</p>
+      <textarea
+        id="interests"
+        class="form-textarea"
+        rows="3"
+        placeholder="例如：我喜欢编程、写算法，玩策略游戏，读科技类书籍，偶尔画画设计……"
+      ></textarea>
+    </div>
+
+    <!-- Self-description -->
+    <div class="form-section">
+      <label class="form-label" for="self-desc">自我描述</label>
+      <p class="form-desc">用几句话描述你是一个怎样的人？你的性格、价值观、对未来的期望？</p>
+      <textarea
+        id="self-desc"
+        class="form-textarea"
+        rows="4"
+        placeholder="例如：我是一个逻辑性很强的人，喜欢解决复杂问题，对人工智能和科学研究很感兴趣，希望未来能在某个领域做出有影响力的工作……"
+      ></textarea>
+    </div>
+  </div>
+
+  <div class="profile-footer">
+    <button class="btn-back" onclick="goToHero()">← 返回首页</button>
+    <button class="btn-analyze" onclick="runAnalysis()">
+      开始分析我的星图 →
+    </button>
+  </div>
+</div>
+
+<!-- ════ PAGE 3: RESULTS ════ -->
+<div id="page-results" class="page">
+  <div class="results-header">
+    <div class="results-title-row">
+      <div>
+        <p class="page-step">STEP 02 / 02 — 星图解读</p>
+        <h2>你的专属星图</h2>
+      </div>
+      <div>
+        <span class="results-user-tag" id="user-type-tag">🌟 探索者型</span>
+      </div>
+    </div>
+
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" role="tab" onclick="switchTab(0)">
+        <span class="tab-icon">🧠</span> 人格画像
+      </button>
+      <button class="tab-btn" role="tab" onclick="switchTab(1)">
+        <span class="tab-icon">🚀</span> 国家战略
+      </button>
+      <button class="tab-btn" role="tab" onclick="switchTab(2)">
+        <span class="tab-icon">🛤️</span> 推荐路径
+      </button>
+      <button class="tab-btn" role="tab" onclick="switchTab(3)">
+        <span class="tab-icon">⏳</span> 人生航线
+      </button>
+    </nav>
+  </div>
+
+  <!-- TAB 0: 人格画像 -->
+  <div class="tab-panel active" id="tab-0">
+    <div class="radar-layout">
+      <div class="radar-wrap">
+        <h3>Holland 六维兴趣雷达</h3>
+        <div style="position:relative;height:280px;">
+          <canvas id="radar-chart" role="img" aria-label="Holland六维雷达图"></canvas>
+        </div>
+        <div class="radar-labels" id="radar-labels"></div>
+      </div>
+      <div class="personality-card" id="personality-card">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1: 国家战略 -->
+  <div class="tab-panel" id="tab-1">
+    <div class="strategy-grid" id="strategy-grid">
+      <!-- Filled by JS -->
+    </div>
+    <div class="industry-row">
+      <h3>相关行业趋势</h3>
+      <div class="industry-chips" id="industry-chips">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: 推荐路径 -->
+  <div class="tab-panel" id="tab-2">
+    <div class="career-layout">
+      <div class="chart-card">
+        <h3>专业方向匹配度</h3>
+        <div style="position:relative;height:320px;">
+          <canvas id="career-chart" role="img" aria-label="职业路径匹配度柱状图"></canvas>
+        </div>
+      </div>
+      <div class="career-cards" id="career-cards">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: 人生航线 -->
+  <div class="tab-panel" id="tab-3">
+    <div class="timeline-wrap">
+      <div class="timeline-line"></div>
+      <div id="timeline-items">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+    <div class="download-section">
+      <p>你的专属星图报告已生成完毕，下载留存或分享给家人</p>
+      <button class="btn-download" onclick="downloadReport()">
+        📄 下载我的星图报告
+      </button>
+    </div>
+    <div style="margin-top:1.5rem;text-align:center;">
+      <button class="btn-back" onclick="goToProfile()">← 重新填写画像</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="loading-orb"></div>
+  <p class="loading-text">多智能体系统正在解析你的星图…</p>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA — ported directly from demo_app.py
+═══════════════════════════════════════════ */
+
+const PERSONALITY_PROFILES = {
+  R: {
+    name: "现实型",
+    en: "Realistic",
+    color: "#f59e0b",
+    desc: "你是一个脚踏实地的实干者，偏好具体的、动手操作的工作，擅长使用工具、机械和技术设备。你重视实用性和结果。",
+    traits: ["动手能力强", "解决实际问题", "技术导向", "独立工作", "注重实效"],
+    icon: "⚙️"
+  },
+  I: {
+    name: "研究型",
+    en: "Investigative",
+    color: "#3b82f6",
+    desc: "你有强烈的求知欲和分析能力，喜欢通过观察、研究和分析来解决复杂问题。你独立思考，享受智识挑战。",
+    traits: ["逻辑分析强", "好奇心旺盛", "学术研究型", "独立思考", "系统化思维"],
+    icon: "🔬"
+  },
+  A: {
+    name: "艺术型",
+    en: "Artistic",
+    color: "#ec4899",
+    desc: "你富有创造力和想象力，喜欢通过艺术、音乐、写作等方式表达自己。你重视美感和原创性，不喜欢受规则束缚。",
+    traits: ["创造力丰富", "审美敏锐", "表达能力强", "追求个性", "情感细腻"],
+    icon: "🎨"
+  },
+  S: {
+    name: "社会型",
+    en: "Social",
+    color: "#10b981",
+    desc: "你喜欢与人交流、帮助他人，具有强烈的社会责任感。你擅长沟通协作，在教育、咨询或服务领域如鱼得水。",
+    traits: ["沟通能力强", "乐于助人", "团队协作", "同理心强", "社会责任感"],
+    icon: "🤝"
+  },
+  E: {
+    name: "企业型",
+    en: "Enterprising",
+    color: "#f97316",
+    desc: "你有领导力和说服力，喜欢组织和管理项目，具有商业敏感度。你享受竞争和挑战，善于把握机会。",
+    traits: ["领导力强", "目标导向", "商业思维", "冒险精神", "影响他人"],
+    icon: "🚀"
+  },
+  C: {
+    name: "常规型",
+    en: "Conventional",
+    color: "#8b5cf6",
+    desc: "你做事细心、有条理，擅长处理数据和文件。你重视秩序和规范，在需要精确性和组织能力的工作中表现出色。",
+    traits: ["细心严谨", "组织能力强", "数据敏感", "注重流程", "稳定可靠"],
+    icon: "📊"
+  }
+};
+
+const STRATEGIC_DIRECTIONS = [
+  {
+    name: "粒子物理与基础科学",
+    icon: "💫",
+    desc: "2024年北京谱仪Ⅲ确认胶球存在——中国在基础物理领域的世界级突破，自标准模型以来最重要的粒子发现。",
+    tags: ["胶球BESⅢ", "高能物理", "标准模型"],
+    tagColors: ["rgba(99,102,241,.15)","rgba(79,70,229,.15)","rgba(139,92,246,.15)"],
+    accent: "linear-gradient(135deg,#6366f1,#3730a3)",
+    tagBorderColors: ["rgba(99,102,241,.5)","rgba(79,70,229,.5)","rgba(139,92,246,.5)"],
+    tagTextColors: ["#818cf8","#a78bfa","#c4b5fd"],
+    riasec: ["I","R","C"],
+    majors: ["粒子物理与原子核物理","理论物理","物理学"],
+    schools: ["中国科学技术大学","北京大学","南京大学","中国科学院大学"],
+    career: "本科物理 → 硕士高能物理 → BESⅢ实验组 → 国家实验室/CERN",
+    salary: "学术¥20-35万/年，转量化¥50万+"
+  },
+  {
+    name: "航空航天与空天一体化",
+    icon: "🛸",
+    desc: "南天门计划面向2035的空天一体化战略，含可重复使用运载器、空天飞机、载人月球探测，2030前后载人登月。",
+    tags: ["南天门计划", "载人登月", "空天飞机"],
+    tagColors: ["rgba(139,92,246,.15)","rgba(59,130,246,.15)","rgba(239,68,68,.15)"],
+    accent: "linear-gradient(135deg,#8b5cf6,#4c1d95)",
+    tagBorderColors: ["rgba(139,92,246,.5)","rgba(59,130,246,.5)","rgba(239,68,68,.5)"],
+    tagTextColors: ["#a78bfa","#60a5fa","#f87171"],
+    riasec: ["R","I","C"],
+    majors: ["航空航天工程","飞行器设计与工程","航天动力工程"],
+    schools: ["北京航空航天大学","哈尔滨工业大学","西北工业大学","国防科技大学"],
+    career: "本科航天工程 → 推进/控制方向 → 航天科技/科工集团 → 南天门型号",
+    salary: "体制内¥18-25万+编制，民营航天¥30-60万"
+  },
+  {
+    name: "可控核聚变与新能源",
+    icon: "☀️",
+    desc: "中国聚变工程实验堆(CFETR)已立项，计划2035建成。中国聚变专利全球第一，终极能源解决方案。",
+    tags: ["CFETR", "托卡马克", "人造太阳"],
+    tagColors: ["rgba(251,191,36,.15)","rgba(249,115,22,.15)","rgba(239,68,68,.15)"],
+    accent: "linear-gradient(135deg,#fbbf24,#b45309)",
+    tagBorderColors: ["rgba(251,191,36,.5)","rgba(249,115,22,.5)","rgba(239,68,68,.5)"],
+    tagTextColors: ["#fcd34d","#fb923c","#f87171"],
+    riasec: ["R","I","E"],
+    majors: ["核工程与核技术","等离子体物理","新能源科学与工程"],
+    schools: ["中国科学技术大学","清华大学","华中科技大学","核工业西南物理研究院"],
+    career: "本科核工 → 等离子体 → CFETR项目 → 中核集团/中科院等离子体所",
+    salary: "¥20-35万/年 + 国家重点补贴"
+  },
+  {
+    name: "量子科技与未来计算",
+    icon: "🔮",
+    desc: "中国量子通信全球领先，墨子号实现千公里级量子纠缠分发，十四五将量子信息列为前沿攻关第一梯队。",
+    tags: ["量子计算", "墨子号", "超导量子"],
+    tagColors: ["rgba(59,130,246,.15)","rgba(168,85,247,.15)","rgba(99,102,241,.15)"],
+    accent: "linear-gradient(135deg,#3b82f6,#7c3aed)",
+    tagBorderColors: ["rgba(59,130,246,.5)","rgba(168,85,247,.5)","rgba(99,102,241,.5)"],
+    tagTextColors: ["#60a5fa","#a78bfa","#818cf8"],
+    riasec: ["I","R","C"],
+    majors: ["量子信息科学","物理学","计算机科学与技术"],
+    schools: ["中国科学技术大学","清华大学","浙江大学","南京大学"],
+    career: "本科物理/计算机 → 量子信息 → 量子计算方向 → 国家实验室/华为/本源量子",
+    salary: "¥30-80万+"
+  },
+  {
+    name: "人工智能与自主芯片",
+    icon: "🧠",
+    desc: "AI芯片是卡脖子核心战场，国产GPU从0到1突破，华为昇腾/寒武纪/壁仞形成自主生态，芯片人才缺口超30万。",
+    tags: ["AI芯片", "国产GPU", "智能体"],
+    tagColors: ["rgba(236,72,153,.15)","rgba(59,130,246,.15)","rgba(99,102,241,.15)"],
+    accent: "linear-gradient(135deg,#ec4899,#1d4ed8)",
+    tagBorderColors: ["rgba(236,72,153,.5)","rgba(59,130,246,.5)","rgba(99,102,241,.5)"],
+    tagTextColors: ["#f472b6","#60a5fa","#818cf8"],
+    riasec: ["I","R","E"],
+    majors: ["人工智能","计算机科学与技术","集成电路设计与集成系统"],
+    schools: ["清华大学","北京大学","浙江大学","上海交通大学","中国科学技术大学"],
+    career: "本科CS/微电子 → 硕士AI/芯片 → 大厂AI Lab或芯片创业",
+    salary: "¥25-60万，AI研究员¥50万+"
+  },
+  {
+    name: "合成生物学与基因编辑",
+    icon: "🧬",
+    desc: "中国合成生物学论文全球第一，基因治疗药物已进入临床。十五五生物经济规划明确将合成生物列为核心赛道。",
+    tags: ["合成生物", "CRISPR", "基因治疗"],
+    tagColors: ["rgba(16,185,129,.15)","rgba(236,72,153,.15)","rgba(139,92,246,.15)"],
+    accent: "linear-gradient(135deg,#10b981,#065f46)",
+    tagBorderColors: ["rgba(16,185,129,.5)","rgba(236,72,153,.5)","rgba(139,92,246,.5)"],
+    tagTextColors: ["#34d399","#f472b6","#a78bfa"],
+    riasec: ["I","R","S"],
+    majors: ["生物科学","生物工程","合成生物学"],
+    schools: ["清华大学","西湖大学","天津大学","中国科学院深圳先进院"],
+    career: "本科生物 → 合成生物学 → 基因编辑 → 药企研发/合成生物创业",
+    salary: "¥18-40万，创业空间极大"
+  },
+  {
+    name: "脑科学与脑机接口",
+    icon: "🧬",
+    desc: "中国脑计划(2030)已启动投入超百亿。浙大完成全球首例侵入式脑机接口临床研究，下一代人机交互革命。",
+    tags: ["脑科学", "脑机接口", "类脑计算"],
+    tagColors: ["rgba(168,85,247,.15)","rgba(236,72,153,.15)","rgba(59,130,246,.15)"],
+    accent: "linear-gradient(135deg,#a855f7,#7c3aed)",
+    tagBorderColors: ["rgba(168,85,247,.5)","rgba(236,72,153,.5)","rgba(59,130,246,.5)"],
+    tagTextColors: ["#c084fc","#f472b6","#60a5fa"],
+    riasec: ["I","S","R"],
+    majors: ["神经科学","生物医学工程","计算机科学与技术"],
+    schools: ["浙江大学","北京大学","复旦大学","中国科学院脑智卓越中心"],
+    career: "本科医工 → 神经工程 → 脑机接口 → 脑科学实验室/创业",
+    salary: "¥25-50万+"
+  },
+  {
+    name: "文化传承与数字人文",
+    icon: "📜",
+    desc: "文化遗产数字化是国家文化战略重点。AI古籍修复、数字敦煌、考古科技等方向将人文深度与前沿技术融合。",
+    tags: ["数字敦煌", "AI古籍", "考古科技"],
+    tagColors: ["rgba(236,72,153,.15)","rgba(251,191,36,.15)","rgba(139,92,246,.15)"],
+    accent: "linear-gradient(135deg,#ec4899,#d97706)",
+    tagBorderColors: ["rgba(236,72,153,.5)","rgba(251,191,36,.5)","rgba(139,92,246,.5)"],
+    tagTextColors: ["#f472b6","#fcd34d","#a78bfa"],
+    riasec: ["A","S","I"],
+    majors: ["历史学","考古学","数字媒体技术","文化遗产学"],
+    schools: ["北京大学","复旦大学","浙江大学","敦煌研究院"],
+    career: "本科历史/CS → 数字人文 → 文化遗产机构/博物馆/文旅科技",
+    salary: "¥15-35万/年"
+  },
+  {
+    name: "社会治理与公共政策",
+    icon: "⚖️",
+    desc: "智慧城市、数字治理、AI伦理与法律成为社会发展刚需，公共政策+数据科学交叉人才极度稀缺。",
+    tags: ["数字治理", "AI伦理", "公共政策"],
+    tagColors: ["rgba(16,185,129,.15)","rgba(59,130,246,.15)","rgba(251,191,36,.15)"],
+    accent: "linear-gradient(135deg,#10b981,#ca8a04)",
+    tagBorderColors: ["rgba(16,185,129,.5)","rgba(59,130,246,.5)","rgba(251,191,36,.5)"],
+    tagTextColors: ["#34d399","#60a5fa","#fcd34d"],
+    riasec: ["S","E","C"],
+    majors: ["公共管理","法学","社会学","数据科学"],
+    schools: ["北京大学","清华大学","中国人民大学","复旦大学"],
+    career: "本科社科/法学 → MPP/MPA → 政府智库/国际组织/科技政策",
+    salary: "¥18-40万/年"
+  },
+  {
+    name: "教育创新与认知科学",
+    icon: "📚",
+    desc: "AI自适应教育是国家教育数字化战略核心，中国在线教育市场超5000亿，学习科学与认知科学人才紧缺。",
+    tags: ["AI教育", "学习科学", "教育公平"],
+    tagColors: ["rgba(16,185,129,.15)","rgba(99,102,241,.15)","rgba(236,72,153,.15)"],
+    accent: "linear-gradient(135deg,#10b981,#6366f1)",
+    tagBorderColors: ["rgba(16,185,129,.5)","rgba(99,102,241,.5)","rgba(236,72,153,.5)"],
+    tagTextColors: ["#34d399","#818cf8","#f472b6"],
+    riasec: ["S","A","I"],
+    majors: ["教育学","心理学","认知科学","教育技术学"],
+    schools: ["北京师范大学","华东师范大学","浙江大学","北京大学"],
+    career: "本科教育/心理 → 学习科学 → 教育科技/学而思/科大讯飞/创业",
+    salary: "¥15-35万/年"
+  }
+];
+
+const INDUSTRY_TRENDS = [
+  "胶球/BESⅢ 粒子发现",
+  "南天门空天一体化计划",
+  "CFETR聚变堆2035建成",
+  "量子计算工程化推进",
+  "国产AI芯片突破",
+  "合成生物学产业化元年",
+  "脑机接口临床试验",
+  "CHINA脑计划2030",
+  "商业航天发射降本",
+  "基因治疗药物上市"
+];
+
+const CAREER_PATHS = [
+  {
+    name: "粒子物理研究员",
+    directions: ["粒子物理与基础科学"],
+    desc: "投身高能物理前沿，研究宇宙最基本构成。参与BESⅢ实验国际合作，解谜胶球本质与标准模型之外的新物理。",
+    riasec: ["I","R","C"],
+    salary: "¥20-40万/年",
+    growth: "前沿突破型",
+    schools: ["中国科学技术大学", "北京大学", "南京大学"]
+  },
+  {
+    name: "航天/空天工程师",
+    directions: ["航空航天与空天一体化"],
+    desc: "参与新一代运载器、空天飞机或载人登月工程，把南天门计划从蓝图变为现实。",
+    riasec: ["R","I","C"],
+    salary: "¥18-35万（体制内+编制）",
+    growth: "民营航天爆发期",
+    schools: ["北京航空航天大学", "哈工大", "西工大"]
+  },
+  {
+    name: "聚变能源科学家",
+    directions: ["可控核聚变与新能源"],
+    desc: "在CFETR项目中研究托卡马克等离子体物理与聚变工程，亲手为人类造一颗人造太阳。",
+    riasec: ["R","I","E"],
+    salary: "¥20-35万+国家补贴",
+    growth: "国家重大工程",
+    schools: ["中国科学技术大学", "清华大学", "华中科技大学"]
+  },
+  {
+    name: "量子信息研究员",
+    directions: ["量子科技与未来计算"],
+    desc: "在量子计算或量子通信领域深耕，从超导量子比特到墨子号星地网络，定义下一代信息范式。",
+    riasec: ["I","R","C"],
+    salary: "¥30-80万+",
+    growth: "全球战略导向",
+    schools: ["中国科学技术大学", "清华大学", "浙江大学"]
+  },
+  {
+    name: "AI芯片架构师",
+    directions: ["人工智能与自主芯片"],
+    desc: "设计国产GPU/NPU核心架构或大模型推理加速方案，直面卡脖子最核心战场。",
+    riasec: ["I","R","E"],
+    salary: "¥25-60万",
+    growth: "年增长45%",
+    schools: ["清华大学", "复旦大学", "上海交通大学"]
+  },
+  {
+    name: "合成生物学家",
+    directions: ["合成生物学与基因编辑"],
+    desc: "用工程化思维改造生命系统，从人造细胞到微生物工厂，21世纪生物学革命终将兑现。",
+    riasec: ["I","R","S"],
+    salary: "¥18-40万",
+    growth: "创业空间极大",
+    schools: ["清华大学", "西湖大学", "天津大学"]
+  },
+  {
+    name: "脑机接口研究员",
+    directions: ["脑科学与脑机接口"],
+    desc: "在神经工程与AI交叉领域，让大脑直接与计算机对话——这是超越键盘/屏幕的下一代交互。",
+    riasec: ["I","S","R"],
+    salary: "¥25-50万+",
+    growth: "前沿突破型",
+    schools: ["浙江大学", "北京大学", "复旦大学"]
+  },
+  {
+    name: "大模型/智能体工程师",
+    directions: ["人工智能与自主芯片"],
+    desc: "构建多智能体系统、训练大语言模型、驱动Agent在生产级场景中自主决策与协作。",
+    riasec: ["I","E","C"],
+    salary: "¥30-60万",
+    growth: "年增长40%",
+    schools: ["北京大学", "浙江大学", "上海交通大学"]
+  },
+  {
+    name: "数字人文学者",
+    directions: ["文化传承与数字人文"],
+    desc: "用AI与数字技术还原古籍、保护文化遗产、构建数字博物馆，让千年文明在代码中永存。",
+    riasec: ["A","S","I"],
+    salary: "¥15-35万/年",
+    growth: "文化产业数字化年增25%",
+    schools: ["北京大学", "复旦大学", "浙江大学"]
+  },
+  {
+    name: "公共政策分析师",
+    directions: ["社会治理与公共政策"],
+    desc: "结合数据科学与政策研究，为政府和企业提供社会治理、AI伦理、城市数字化等政策建议。",
+    riasec: ["S","E","C"],
+    salary: "¥18-40万/年",
+    growth: "数字治理人才缺口持续扩大",
+    schools: ["北京大学", "清华大学", "中国人民大学"]
+  },
+  {
+    name: "教育产品设计师",
+    directions: ["教育创新与认知科学"],
+    desc: "基于学习科学与认知心理学，设计下一代AI驱动的自适应教育产品，让优质教育资源普惠天下。",
+    riasec: ["S","A","I"],
+    salary: "¥15-35万/年",
+    growth: "在线教育市场超5000亿",
+    schools: ["北京师范大学", "华东师范大学", "浙江大学"]
+  }
+];
+
+/* ═══════════════════════════════════════════
+   LOGIC — classify_personality & match_career_paths
+═══════════════════════════════════════════ */
+
+function classify_personality(subjects, interests, selfDesc) {
+  const scores = { R:0, I:0, A:0, S:0, E:0, C:0 };
+  const text = (interests + ' ' + selfDesc).toLowerCase();
+
+  // Subject mapping
+  const subjectMap = {
+    '数学': ['I','C'], '物理': ['I','R'], '化学': ['I','R'],
+    '生物': ['I','R'], '信息技术': ['I','R','C'],
+    '语文': ['A','S'], '英语': ['S','A'], '历史': ['A','S'],
+    '地理': ['I','R'], '政治': ['S','E'],
+    '艺术': ['A'], '体育': ['R','S']
+  };
+
+  subjects.forEach(s => {
+    (subjectMap[s] || []).forEach(code => { scores[code] += 2; });
+  });
+
+  // Keyword mapping
+  const keywordMap = {
+    R: ['动手','操作','工具','机器','实验','制作','建造','修理','电路'],
+    I: ['研究','分析','算法','科学','数据','编程','代码','逻辑','求知','学术','探索','思考'],
+    A: ['创作','艺术','设计','写作','音乐','绘画','创意','美感','故事','表达'],
+    S: ['帮助','沟通','团队','志愿','教学','交流','社区','服务','合作','关爱'],
+    E: ['领导','创业','商业','管理','竞争','目标','影响','说服','项目','机会'],
+    C: ['细心','数据','统计','规划','整理','流程','精确','系统','文件','记录']
+  };
+
+  Object.entries(keywordMap).forEach(([code, words]) => {
+    words.forEach(w => {
+      if (text.includes(w)) scores[code] += 1.5;
+    });
+  });
+
+  return scores;
+}
+
+function match_career_paths(riasec_scores, top_n=3) {
+  const maxScore = Math.max(...Object.values(riasec_scores), 1);
+  const normStu = {};
+  Object.keys(riasec_scores).forEach(k => { normStu[k] = riasec_scores[k] / maxScore; });
+
+  const careerWeights = [1.0, 0.65, 0.35];
+
+  const scored = CAREER_PATHS.map(path => {
+    const vec = { R:0, I:0, A:0, S:0, E:0, C:0 };
+    path.riasec.forEach((code, idx) => { vec[code] = careerWeights[Math.min(idx,2)]; });
+
+    let dot = 0, nA = 0, nB = 0;
+    Object.keys(vec).forEach(k => {
+      dot += normStu[k] * vec[k];
+      nA += normStu[k] * normStu[k];
+      nB += vec[k] * vec[k];
+    });
+    const sim = (nA > 0 && nB > 0) ? dot / (Math.sqrt(nA) * Math.sqrt(nB)) : 0;
+    const pct = Math.min(98, Math.max(5, Math.round(sim * 100)));
+    return { ...path, match: pct };
+  });
+
+  return scored.sort((a,b) => b.match - a.match).slice(0, top_n);
+}
+
+function get_top_strategies(riasec_scores, n=3) {
+  const maxScore = Math.max(...Object.values(riasec_scores), 1);
+  const normStu = {};
+  Object.keys(riasec_scores).forEach(k => { normStu[k] = riasec_scores[k] / maxScore; });
+
+  const weights = [1.0, 0.65, 0.35];
+
+  const scored = STRATEGIC_DIRECTIONS.map(d => {
+    const vec = { R:0, I:0, A:0, S:0, E:0, C:0 };
+    d.riasec.forEach((code, idx) => { vec[code] = weights[Math.min(idx,2)]; });
+
+    let dot = 0, nA = 0, nB = 0;
+    Object.keys(vec).forEach(k => {
+      dot += normStu[k] * vec[k];
+      nA += normStu[k] * normStu[k];
+      nB += vec[k] * vec[k];
+    });
+    const sim = (nA > 0 && nB > 0) ? dot / (Math.sqrt(nA) * Math.sqrt(nB)) : 0;
+    const score = Math.round(sim * 100);
+    return { ...d, score };
+  });
+  return scored.sort((a,b) => b.score-a.score).slice(0, n);
+}
+
+/* ═══════════════════════════════════════════
+   STATE & NAVIGATION
+═══════════════════════════════════════════ */
+
+let currentPage = 'hero';
+let analysisData = null;
+let radarChartInstance = null;
+let careerChartInstance = null;
+
+function goToHero() {
+  showPage('hero');
+}
+
+function goToProfile() {
+  showPage('profile');
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  currentPage = name;
+  window.scrollTo(0, 0);
+}
+
+function switchTab(idx) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+
+  // Render charts lazily
+  if (idx === 0 && analysisData) renderRadar();
+  if (idx === 2 && analysisData) renderCareerChart();
+}
+
+/* ═══════════════════════════════════════════
+   ANALYSIS
+═══════════════════════════════════════════ */
+
+async function runAnalysis() {
+  const subjects = Array.from(document.querySelectorAll('input[name="subject"]:checked')).map(el => el.value);
+  const interests = document.getElementById('interests').value;
+  const selfDesc = document.getElementById('self-desc').value;
+
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('visible');
+
+  try {
+    const resp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subjects, interests, self_description: selfDesc })
+    });
+
+    const apiData = await resp.json();
+    if (apiData.error) throw new Error(apiData.error);
+
+    const scores = apiData.riasec_scores;
+    const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+    const primaryCode = sorted[0][0];
+
+    const topCareers = apiData.careers || [];
+    const topStrategies = apiData.strategies || [];
+
+    analysisData = {
+      scores,
+      topCareers: topCareers.filter(c => c.match),
+      topStrategies: topStrategies.filter(s => s.name),
+      primaryCode,
+      subjects,
+      persona_summary: apiData.persona_summary || '',
+      capability_tags: apiData.capability_tags || [],
+      timeline_stages: apiData.timeline_stages || [],
+    };
+
+    overlay.classList.remove('visible');
+    showPage('results');
+
+    const prof = PERSONALITY_PROFILES[primaryCode];
+    document.getElementById('user-type-tag').textContent = (prof ? prof.icon : '🌟') + ' ' + (prof ? prof.name : '探索者');
+
+    renderPersonalityCard(primaryCode, scores);
+    renderStrategies(topStrategies.filter(s => s.name));
+    renderCareerCards(topCareers.filter(c => c.match));
+    renderTimeline(primaryCode, null);
+    setTimeout(() => renderRadar(), 100);
+  } catch (e) {
+    overlay.classList.remove('visible');
+    alert('分析失败: ' + e.message + '\n请确认后端已启动(python src/server.py)');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RENDERS
+═══════════════════════════════════════════ */
+
+function renderRadar() {
+  if (!analysisData) return;
+  const { scores } = analysisData;
+  const labels = Object.keys(PERSONALITY_PROFILES);
+  const data = labels.map(k => scores[k] || 0);
+  const maxVal = Math.max(...data, 1);
+  const normalized = data.map(v => Math.round((v / maxVal) * 10));
+
+  const canvas = document.getElementById('radar-chart');
+  if (radarChartInstance) { radarChartInstance.destroy(); }
+
+  radarChartInstance = new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels: labels.map(k => PERSONALITY_PROFILES[k].name),
+      datasets: [{
+        label: 'Holland 分值',
+        data: normalized,
+        backgroundColor: 'rgba(79,172,254,.18)',
+        borderColor: '#4facfe',
+        borderWidth: 2,
+        pointBackgroundColor: labels.map(k => PERSONALITY_PROFILES[k].color),
+        pointBorderColor: '#fff',
+        pointRadius: 5,
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          min: 0, max: 10,
+          ticks: { display: false, stepSize: 2 },
+          grid: { color: 'rgba(99,172,255,.12)' },
+          angleLines: { color: 'rgba(99,172,255,.15)' },
+          pointLabels: {
+            color: '#7a93b4',
+            font: { size: 12, family: '"PingFang SC", system-ui' }
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0d1b2e',
+          borderColor: 'rgba(99,172,255,.3)',
+          borderWidth: 1,
+          titleColor: '#4facfe',
+          bodyColor: '#e8edf5'
+        }
+      }
+    }
+  });
+
+  // Legend
+  const legendEl = document.getElementById('radar-labels');
+  legendEl.innerHTML = Object.entries(PERSONALITY_PROFILES).map(([k, p]) =>
+    `<span class="radar-legend-item">
+      <span class="radar-legend-dot" style="background:${p.color}"></span>
+      ${p.name}
+    </span>`
+  ).join('');
+}
+
+function renderPersonalityCard(code, scores) {
+  const prof = PERSONALITY_PROFILES[code] || PERSONALITY_PROFILES['I'];
+  const summary = analysisData?.persona_summary || prof.desc;
+  const tags = (analysisData?.capability_tags && analysisData.capability_tags.length)
+    ? analysisData.capability_tags : prof.traits;
+
+  document.getElementById('personality-card').innerHTML = `
+    <div class="personality-type-badge" style="background:${prof.color}22;border:1px solid ${prof.color}55;color:${prof.color}">
+      ${prof.icon} ${prof.name}（${prof.en}）
+    </div>
+    <h3 class="personality-name">${prof.icon} AI 眼中的你</h3>
+    <p class="personality-desc">${summary}</p>
+    <div class="trait-list">
+      ${tags.map(t => `
+        <div class="trait-item">
+          <div class="trait-dot" style="background:${prof.color}"></div>
+          ${t}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderStrategies(strategies) {
+  const grid = document.getElementById('strategy-grid');
+  if (!strategies.length) return;
+
+  grid.innerHTML = strategies.map((s, i) => {
+    const schools = s.schools || [];
+    const schoolsHtml = schools.length ? schools.map(t => `
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">
+        <b style="color:var(--star-blue)">${t.tier}:</b> ${(t.list||[]).join('、')}
+      </div>`).join('') : '';
+    return `
+    <div class="strategy-card fade-in" style="--card-accent:linear-gradient(135deg,#3b82f6,#1d4ed8);animation-delay:${i*0.08}s">
+      <div class="strategy-icon">${['🥇','🥈','🥉'][i]||'🔬'}</div>
+      <div class="strategy-name">${s.name} <span style="font-size:13px;color:var(--star-cyan)">${s.score}%</span></div>
+      <div class="strategy-desc">${s.desc}</div>
+      ${schoolsHtml}
+    </div>`;
+  }).join('');
+
+  const chips = document.getElementById('industry-chips');
+  chips.innerHTML = strategies.slice(0,8).map(s => `<span class="industry-chip">${s.name.split('与')[0]}</span>`).join('');
+}
+
+function renderCareerChart() {
+  if (!analysisData) return;
+  const { topCareers } = analysisData;
+  const canvas = document.getElementById('career-chart');
+  if (careerChartInstance) { careerChartInstance.destroy(); }
+
+  // Show all careers for the bar chart
+  const entries = topCareers.slice(0, 7);
+
+  const barColors = entries.map((_, i) => i < 3 ? '#4facfe' : '#3a5070');
+
+  careerChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: entries.map(c => c.name.length > 8 ? c.name.slice(0,8)+'…' : c.name),
+      datasets: [{
+        label: '匹配度 %',
+        data: entries.map(c => c.match),
+        backgroundColor: barColors,
+        borderColor: barColors,
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(99,172,255,.08)' },
+          ticks: { color: '#7a93b4', font: { size: 11 }, callback: v => v + '%' },
+          border: { color: 'rgba(99,172,255,.12)' }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#7a93b4', font: { size: 12 } },
+          border: { color: 'rgba(99,172,255,.12)' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0d1b2e',
+          borderColor: 'rgba(99,172,255,.3)',
+          borderWidth: 1,
+          titleColor: '#4facfe',
+          bodyColor: '#e8edf5',
+          callbacks: { label: ctx => ` 匹配度：${ctx.parsed.x}%` }
+        }
+      }
+    }
+  });
+}
+
+function renderCareerCards(careers) {
+  const container = document.getElementById('career-cards');
+  container.innerHTML = careers.map((c, i) => `
+    <div class="career-card fade-in" style="animation-delay:${i*0.1}s">
+      <div class="career-card-header">
+        <span class="career-card-name">${['🥇','🥈','🥉'][i]} ${c.name}</span>
+        <span class="match-badge">匹配 ${c.match}%</span>
+      </div>
+      <p class="career-desc">${c.desc}</p>
+      <div class="career-meta">
+        <span class="career-meta-item">💰 ${c.salary || '—'}</span>
+        <span class="career-meta-item">📈 ${c.growth || '—'}</span>
+        <span class="career-meta-item">🏫 ${(c.schools||['顶尖院校'])[0]}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+const TIMELINE_TEMPLATES = {
+  I: [
+    { period: "高中阶段 2025-2027", title: "数理基础强化 + 竞赛备战", desc: "参加数学/物理/信息竞赛，培养科研思维。利用暑期接触基础编程和实验课题，为科研型专业奠基。", icon: "📚", tags: ["竞赛", "基础研究", "编程启蒙"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "985高校计算机/数学/物理专业", desc: "深耕专业基础，主动进入实验室参与科研项目。争取交换、联培机会，积累论文与国际视野。", icon: "🎓", tags: ["985/211", "科研实验室", "交换学习"], nodeClass: "nebula" },
+    { period: "研究生阶段 2031-2034", title: "硕博连读/直博深造", desc: "聚焦一个前沿方向（如大模型、量子计算、生物信息），在顶级团队完成有原创性的研究工作。", icon: "🔬", tags: ["直博", "顶会论文", "国际合作"], nodeClass: "gold" },
+    { period: "职业阶段 2034+", title: "科研机构/头部科技企业研究员", desc: "加入国家实验室、高校或字节/华为/腾讯研究院，成为细分领域的技术领导者，推动前沿突破。", icon: "🌟", tags: ["AI研究员", "算法科学家", "技术带头人"], nodeClass: "green" }
+  ],
+  E: [
+    { period: "高中阶段 2025-2027", title: "领导力积累 + 商业启蒙", desc: "担任班干部或社团负责人，组织活动培养领导力。关注商业新闻，了解创业生态，参加模拟商业大赛。", icon: "🏆", tags: ["学生干部", "模拟商赛", "领导力训练"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "管理/经济/工科综合型专业", desc: "广泛参与社团、创业大赛、实习机会，建立人脉网络。利用假期在互联网公司或咨询公司实习。", icon: "🎓", tags: ["产品实习", "创业大赛", "跨界学习"], nodeClass: "nebula" },
+    { period: "初入职场 2031-2035", title: "互联网/咨询/投资行业", desc: "从产品经理、咨询顾问或初级投资分析师起步，快速积累行业认知和职业技能，找到独特优势。", icon: "💼", tags: ["产品经理", "战略咨询", "投资分析"], nodeClass: "gold" },
+    { period: "成熟期 2035+", title: "业务负责人 / 创业者", desc: "带领团队承担P&L责任，或基于积累的经验与资源自主创业，在新兴赛道构建自己的影响力版图。", icon: "🚀", tags: ["创业CEO", "业务负责人", "投资人"], nodeClass: "green" }
+  ],
+  A: [
+    { period: "高中阶段 2025-2027", title: "创意积累 + 作品集准备", desc: "坚持创作（写作、设计、音乐或视频），建立个人作品集。参加艺术类比赛，探索数字创意工具。", icon: "🎨", tags: ["作品集", "创意训练", "数字工具"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "设计/传媒/人文艺术类院校", desc: "在顶级艺术/设计院校打磨技艺，同时掌握AI辅助创作工具。参与商业项目实战，获得市场认可。", icon: "🎓", tags: ["中央美院", "传媒大学", "AI创作"], nodeClass: "nebula" },
+    { period: "成长期 2031-2035", title: "数字内容/UX设计/文化产业", desc: "在互联网公司担任UX/UI设计师，或在文化传媒机构创作优质内容，逐渐建立个人品牌和风格。", icon: "✨", tags: ["UX设计", "内容创作", "品牌设计"], nodeClass: "gold" },
+    { period: "成熟期 2035+", title: "创意总监 / 独立创作者", desc: "成为团队创意领袖，或以独立创作者身份经营个人IP，在文化创意领域建立不可替代的独特价值。", icon: "🌟", tags: ["创意总监", "独立IP", "文化出海"], nodeClass: "green" }
+  ],
+  R: [
+    { period: "高中阶段 2025-2027", title: "理工基础 + 实践探索", desc: "扎实数理化基础，动手参与电子、编程或机械项目。参加科技类社团和发明创造大赛。", icon: "⚙️", tags: ["动手实践", "科技社团", "理工竞赛"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "工科/计算机类专业", desc: "选择工程类专业，深入参与实验室和工程项目，掌握一到两个核心技术方向，争取专利或项目成果。", icon: "🎓", tags: ["工程实训", "专利申请", "横向课题"], nodeClass: "nebula" },
+    { period: "初入职场 2031-2035", title: "技术研发工程师", desc: "加入制造业头部企业或科技公司技术团队，深耕核心技术，在一线项目中成长为技术专家。", icon: "🔧", tags: ["研发工程师", "技术骨干", "工程管理"], nodeClass: "gold" },
+    { period: "成熟期 2035+", title: "技术专家 / 工程负责人", desc: "担任技术总监或首席工程师，主导重大工程项目，或基于技术优势创办科技型企业。", icon: "🏭", tags: ["技术总监", "首席工程师", "科技创业"], nodeClass: "green" }
+  ],
+  S: [
+    { period: "高中阶段 2025-2027", title: "人文积累 + 公益实践", desc: "广泛阅读人文社科书籍，积极参与志愿服务和社区活动，锻炼沟通与组织能力。", icon: "🤝", tags: ["志愿服务", "人文阅读", "社团活动"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "教育/社工/心理/传播类专业", desc: "在顶级师范或综合类高校学习，参与教育实习、田野调查或心理辅导实践，积累真实经验。", icon: "🎓", tags: ["教育实习", "社会调研", "心理咨询"], nodeClass: "nebula" },
+    { period: "成长期 2031-2035", title: "教育/心理/社会工作领域", desc: "在学校、NGO或企业HR/EAP部门工作，将专业技能转化为对社会和个人的实际影响力。", icon: "💫", tags: ["教育从业", "心理咨询师", "HR管理"], nodeClass: "gold" },
+    { period: "成熟期 2035+", title: "领域专家 / 社会创新者", desc: "成为教育改革、心理健康或社区治理领域的领军人物，通过政策倡导或社会创新扩大影响范围。", icon: "🌱", tags: ["教育专家", "社会创新", "公益领袖"], nodeClass: "green" }
+  ],
+  C: [
+    { period: "高中阶段 2025-2027", title: "数理精进 + 规划能力培养", desc: "强化数学和统计基础，学习基础会计或编程，养成有条理、善规划的思维习惯。", icon: "📊", tags: ["数据分析", "财务基础", "系统规划"], nodeClass: "" },
+    { period: "本科阶段 2027-2031", title: "财经/会计/信管/统计类专业", desc: "在财经类高校系统学习专业知识，考取CPA、CFA等含金量高的证书，积累实习经验。", icon: "🎓", tags: ["CPA考证", "四大实习", "数据建模"], nodeClass: "nebula" },
+    { period: "成长期 2031-2035", title: "金融/审计/数据分析领域", desc: "在头部机构积累实战经验，磨练精准分析和严谨决策能力，逐渐承担更大规模的项目责任。", icon: "💹", tags: ["财务分析师", "数据科学家", "风控专员"], nodeClass: "gold" },
+    { period: "成熟期 2035+", title: "CFO / 数据总监 / 量化专家", desc: "晋升为企业CFO、数据负责人或量化基金核心成员，用精密的数字能力驱动高质量决策。", icon: "🏆", tags: ["CFO/CTO", "量化研究员", "风控总监"], nodeClass: "green" }
+  ]
+};
+
+function renderTimeline(primaryCode, topCareer) {
+  let stages;
+
+  if (analysisData?.timeline_stages && analysisData.timeline_stages.length) {
+    const raw = analysisData.timeline_stages;
+    const len = raw.length;
+    const icons = ["📚","🎓","💼","🌟"];
+    stages = raw.map((s, i) => ({
+      period: s.period,
+      title: s.title,
+      desc: s.desc,
+      icon: s.icon || icons[i] || "📌",
+      tags: s.tags || [],
+      nodeClass: i === len-1 ? "green" : (i === len-2 ? "gold" : (i === 1 ? "nebula" : ""))
+    }));
+  } else {
+    stages = (TIMELINE_TEMPLATES[primaryCode] || TIMELINE_TEMPLATES['I']);
+  }
+
+  const container = document.getElementById('timeline-items');
+  container.innerHTML = stages.map((item, i) => `
+    <div class="timeline-item fade-in" style="animation-delay:${i*0.15}s">
+      <div class="timeline-node ${item.nodeClass}">${item.icon}</div>
+      <div class="timeline-body">
+        <div class="timeline-period">${item.period}</div>
+        <div class="timeline-title">${item.title}</div>
+        <div class="timeline-desc">${item.desc}</div>
+        <div class="timeline-tags">
+          ${(item.tags || []).map(t => `<span class="timeline-tag">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
+   DOWNLOAD REPORT
+═══════════════════════════════════════════ */
+
+function downloadReport() {
+  if (!analysisData) return;
+  const { topCareers, topStrategies, persona_summary, capability_tags } = analysisData;
+  const now = new Date().toLocaleDateString('zh-CN');
+  const primaryCode = analysisData.primaryCode || 'I';
+  const prof = PERSONALITY_PROFILES[primaryCode] || PERSONALITY_PROFILES['I'];
+
+  const content = `
+星图·择途 — 专属人生导航报告
+生成时间：${now}
+════════════════════════════════
+
+【人格画像】
+类型倾向：${prof ? prof.icon+' '+prof.name : '探索者'}
+${persona_summary || ''}
+${(capability_tags || []).join('、')}
+
+【推荐战略方向 TOP ${topStrategies.length}】
+${topStrategies.map((s, i) => `${i+1}. ${s.name}（${s.score}%）\n   ${s.desc}`).join('\n\n')}
+
+【推荐职业路径 TOP ${topCareers.length}】
+${topCareers.map((c, i) => `
+${i+1}. ${c.name}（匹配度 ${c.match}%）
+   ${c.desc}
+   薪资范围：${c.salary || '—'}
+   行业增速：${c.growth || '—'}
+   推荐院校：${(c.schools || ['顶尖院校']).join('、')}
+`).join('')}
+
+【行动建议】
+根据你的画像，建议优先关注 ${(topStrategies[0]||{}).name} 方向，
+结合自身兴趣深耕 ${(topCareers[0]||{}).name || '适合你的'} 职业路径。
+保持持续学习，在高考志愿填报时兼顾兴趣与前景。
+
+————————————————
+本报告由 星图·择途 多智能体系统生成
+GoAI Star Map | Competition Demo
+`.trim();
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `星图报告_${(prof||{}).name||'我的'}_${now.replace(/\//g,'-')}.txt`;
+  a.click();
+}
+
+/* ═══════════════════════════════════════════
+   STARFIELD
+═══════════════════════════════════════════ */
+
+(function initStars() {
+  const canvas = document.getElementById('star-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  let animFrame;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function createStars(n) {
+    stars = Array.from({ length: n }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      alpha: Math.random(),
+      speed: Math.random() * 0.003 + 0.001,
+      phase: Math.random() * Math.PI * 2
+    }));
+  }
+
+  function drawStars(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      const a = 0.3 + 0.7 * Math.abs(Math.sin(s.phase + t * s.speed));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${s.r > 1 ? '150,210,255' : '200,230,255'},${a.toFixed(2)})`;
+      ctx.fill();
+    });
+  }
+
+  // Subtle nebula blobs
+  function drawNebula() {
+    const nebulas = [
+      { x: 0.15, y: 0.2, color: 'rgba(79,100,254,0.04)' },
+      { x: 0.8,  y: 0.7, color: 'rgba(167,139,250,0.04)' },
+      { x: 0.5,  y: 0.5, color: 'rgba(0,242,254,0.025)' }
+    ];
+    nebulas.forEach(n => {
+      const g = ctx.createRadialGradient(
+        n.x * canvas.width, n.y * canvas.height, 0,
+        n.x * canvas.width, n.y * canvas.height, Math.min(canvas.width, canvas.height) * 0.4
+      );
+      g.addColorStop(0, n.color);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+  }
+
+  let startTime = null;
+  function loop(ts) {
+    if (!startTime) startTime = ts;
+    const t = (ts - startTime) / 1000;
+    drawNebula();
+    drawStars(t);
+    animFrame = requestAnimationFrame(loop);
+  }
+
+  resize();
+  createStars(280);
+  drawNebula();
+  requestAnimationFrame(loop);
+
+  window.addEventListener('resize', () => {
+    resize();
+    createStars(280);
+  });
+})();
+</script>
+</body>
+</html>
