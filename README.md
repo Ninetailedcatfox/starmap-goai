@@ -2,7 +2,7 @@
 
 ## GOAI 世界人工智能开源大赛 — Boundless Agents · AI+教育
 
-基于多智能体的高考志愿与未来职业导航系统。不做第 1001 个 AI 家教，做第一个帮孩子"看见未来"的择路智能体。
+基于多智能体的高考志愿与未来职业导航系统。不做第 1001 个 AI 志愿填报工具，做第一个帮孩子"看见未来"的择路智能体。
 
 ### 核心能力
 
@@ -23,17 +23,18 @@
 
 ### 技术栈
 
-- **前端**: Streamlit
-- **Agent 编排**: LangGraph (State Graph)
-- **模型层**: 模型无关 (支持 OpenAI / Claude / DeepSeek / Qwen)
-- **知识库**: ChromaDB
-- **可观测**: LangSmith tracing
+- **前端**: 原生 HTML + Chart.js（深色星空主题，纯静态）
+- **后端**: Python HTTP Server（ThreadingHTTPServer）
+- **模型层**: OpenAI 兼容 API（默认 gpt-5.5，可换 DeepSeek / Qwen / Claude）
+- **匹配逻辑**: LLM 先打 RIASEC 六维分数，再据此生成方向/职业/时间轴
 
 ### 快速开始
 
 ```bash
 pip install -r requirements.txt
-streamlit run src/app.py
+# 复制 .env.example 为 .env 并填入 API Key
+python src/server.py
+# 浏览器打开 http://localhost:8800
 ```
 
 ### 目录结构
@@ -43,12 +44,13 @@ streamlit run src/app.py
 │   ├── 项目简介.md
 │   └── 方案PPT大纲.md
 ├── src/
-│   ├── app.py         # Streamlit 主入口
+│   ├── server.py      # 后端主入口（HTTP Server + LLM）
+│   ├── index.html     # 前端页面（星空主题 + Chart.js）
 │   ├── config.py      # 配置
-│   └── agents/        # 四个 Agent 实现
-├── data/
-│   └── knowledge/     # 知识库 JSON
+│   ├── demo_app.py    # 早期 Streamlit 原型
+│   └── agents/        # 早期四 Agent 原型
 ├── docs/              # 技术文档
+├── .env.example       # 环境变量模板
 └── requirements.txt
 ```
 
@@ -59,3 +61,4 @@ streamlit run src/app.py
 - 方向：AI+教育
 - 初赛截止：2026-08-16
 - 官网：https://goaihz.com
+- 开源地址：https://github.com/Ninetailedcatfox/starmap-goai
